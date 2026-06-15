@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/readme/header-homepage-20260403.png" alt="ctx is an Agentic Development Environment (ADE)" />
+  <img src="assets/readme/header-homepage-20260403.png" alt="ctx is an open-source Agentic Development Environment (ADE)" />
 </p>
 
 **Any coding agent. Containerized workspaces. Unified transcripts and review.**
