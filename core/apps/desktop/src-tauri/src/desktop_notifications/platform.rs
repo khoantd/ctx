@@ -41,6 +41,24 @@ use objc2_user_notifications::{
 };
 
 #[cfg(target_os = "macos")]
+fn macos_path_is_inside_app_bundle(path: &std::path::Path) -> bool {
+    path.components().any(|component| {
+        component
+            .as_os_str()
+            .to_string_lossy()
+            .ends_with(".app")
+    })
+}
+
+#[cfg(target_os = "macos")]
+fn macos_running_in_app_bundle() -> bool {
+    std::env::current_exe()
+        .ok()
+        .and_then(|exe| exe.canonicalize().ok())
+        .is_some_and(|exe| macos_path_is_inside_app_bundle(&exe))
+}
+
+#[cfg(target_os = "macos")]
 static MACOS_NOTIFICATION_APP: OnceLock<tauri::AppHandle> = OnceLock::new();
 
 #[cfg(target_os = "macos")]
@@ -100,6 +118,12 @@ impl MacosNotificationDelegate {
 
 #[cfg(target_os = "macos")]
 pub(crate) fn install_macos_notification_delegate(app: tauri::AppHandle) {
+    if !macos_running_in_app_bundle() {
+        eprintln!(
+            "macOS notification delegate skipped: not running inside a .app bundle"
+        );
+        return;
+    }
     let _ = MACOS_NOTIFICATION_APP.set(app);
     let delegate = MACOS_NOTIFICATION_DELEGATE.get_or_init(MacosNotificationDelegate::new);
     let center = UNUserNotificationCenter::currentNotificationCenter();
@@ -139,6 +163,9 @@ fn map_macos_permission(status: UNAuthorizationStatus) -> DesktopNotificationPer
 
 #[cfg(target_os = "macos")]
 fn macos_notification_permission() -> DesktopNotificationPermission {
+    if !macos_running_in_app_bundle() {
+        return DesktopNotificationPermission::Unsupported;
+    }
     let center = UNUserNotificationCenter::currentNotificationCenter();
     let (tx, rx) = mpsc::sync_channel(1);
     let completion = RcBlock::new(move |settings: NonNull<UNNotificationSettings>| {
@@ -152,6 +179,9 @@ fn macos_notification_permission() -> DesktopNotificationPermission {
 
 #[cfg(target_os = "macos")]
 fn macos_request_notification_permission() -> DesktopNotificationPermission {
+    if !macos_running_in_app_bundle() {
+        return DesktopNotificationPermission::Unsupported;
+    }
     let center = UNUserNotificationCenter::currentNotificationCenter();
     let (tx, rx) = mpsc::sync_channel(1);
     let completion = RcBlock::new(move |granted: Bool, _err: *mut NSError| {
@@ -240,6 +270,9 @@ fn macos_delivered_notification_entry(
 #[cfg(all(target_os = "macos", feature = "automation"))]
 fn macos_delivered_notification_entries() -> anyhow::Result<Vec<DesktopDeliveredNotificationEntry>>
 {
+    if !macos_running_in_app_bundle() {
+        anyhow::bail!("macOS notifications require running inside a .app bundle");
+    }
     let center = UNUserNotificationCenter::currentNotificationCenter();
     let (tx, rx) = mpsc::sync_channel(1);
     let completion = RcBlock::new(move |notifications: NonNull<NSArray<UNNotification>>| {
@@ -260,6 +293,9 @@ fn macos_delivered_notification_entries() -> anyhow::Result<Vec<DesktopDelivered
 fn macos_clear_delivered_notifications(
     req: DesktopClearDeliveredNotificationsReq,
 ) -> anyhow::Result<()> {
+    if !macos_running_in_app_bundle() {
+        anyhow::bail!("macOS notifications require running inside a .app bundle");
+    }
     let identifiers = normalize_delivered_notification_identifiers(&req.identifiers)?;
     let ns_identifiers = identifiers
         .iter()
@@ -277,6 +313,9 @@ fn show_macos_notification(
     req: DesktopShowSystemNotificationReq,
     deep_link: String,
 ) -> anyhow::Result<()> {
+    if !macos_running_in_app_bundle() {
+        anyhow::bail!("macOS notifications require running inside a .app bundle");
+    }
     install_macos_notification_delegate(app.clone());
 
     let content = UNMutableNotificationContent::new();
@@ -439,6 +478,17 @@ pub(crate) fn desktop_clear_delivered_notification_automation_snapshot(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn macos_path_is_inside_app_bundle_detects_app_bundle_paths() {
+        assert!(macos_path_is_inside_app_bundle(std::path::Path::new(
+            "/Applications/ctx.app/Contents/MacOS/ctx"
+        )));
+        assert!(!macos_path_is_inside_app_bundle(std::path::Path::new(
+            "/Volumes/Data/Nodejs/ctx/core/target/debug/ctx"
+        )));
+    }
 
     #[test]
     fn delivered_notification_clear_requires_ctx_owned_identifiers() {

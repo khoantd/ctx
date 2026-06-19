@@ -5,7 +5,7 @@
   "identifier": "rs.ctx.desktop",
   "build": {
     "beforeBuildCommand": "",
-    "beforeDevCommand": "",
+    "beforeDevCommand": "pnpm -C ../web dev",
     "devUrl": "http://localhost:5173",
     "frontendDist": "web/dist"
   },

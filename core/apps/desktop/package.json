@@ -4,8 +4,9 @@
   "version": "0.66.0",
   "license": "GPL-3.0-or-later",
   "scripts": {
-    "dev": "pnpm exec tauri dev",
-    "build": "pnpm exec tauri build"
+    "ensure-dev-resources": "bash scripts/ensure-dev-resources.sh",
+    "dev": "pnpm run ensure-dev-resources && pnpm exec tauri dev",
+    "build": "pnpm run ensure-dev-resources && pnpm exec tauri build"
   },
   "devDependencies": {
     "@crabnebula/tauri-driver": "2.0.8",
