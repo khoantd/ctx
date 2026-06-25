@@ -494,6 +494,56 @@ fn builtin_matrix_uses_gemini_managed_npm_bundle_entrypoint() {
 }
 
 #[test]
+fn builtin_matrix_uses_pi_npm_managed_install() {
+    let matrix = builtin_matrix();
+    let pi = get_entry(&matrix, "pi").expect("pi entry");
+    let release = pi.releases.first().expect("pi release");
+
+    match pi
+        .managed_install
+        .as_ref()
+        .expect("pi managed install")
+    {
+        ProviderInstall::Npm {
+            package,
+            version,
+            entrypoint,
+            args,
+            targets,
+        } => {
+            assert_eq!(package, "pi-acp");
+            assert_eq!(version, &release.version);
+            assert_eq!(version, "0.0.31");
+            assert_eq!(entrypoint, "node_modules/pi-acp/dist/index.js");
+            assert!(args.is_empty());
+            assert!(
+                targets.is_empty(),
+                "Pi managed npm install should not use legacy archive targets"
+            );
+        }
+        other => panic!("expected pi npm managed install, got {other:?}"),
+    }
+
+    assert_eq!(pi.dependencies.len(), 1);
+    let dep = &pi.dependencies[0];
+    assert_eq!(dep.id, "pi-cli");
+    match &dep.install {
+        DependencyInstall::Npm { package, version } => {
+            assert_eq!(package, "@earendil-works/pi-coding-agent");
+            assert_eq!(version, "0.80.2");
+        }
+        other => panic!("expected pi-cli npm dependency, got {other:?}"),
+    }
+
+    match pi.version_probe.as_ref().expect("pi version probe") {
+        VersionProbe::NodePackage { package } => {
+            assert_eq!(package, "pi-acp");
+        }
+        other => panic!("expected pi node-package version probe, got {other:?}"),
+    }
+}
+
+#[test]
 fn builtin_matrix_uses_kimi_acp_subcommand() {
     let matrix = builtin_matrix();
     let kimi = matrix
