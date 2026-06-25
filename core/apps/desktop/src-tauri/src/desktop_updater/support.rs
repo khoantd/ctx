@@ -10,6 +10,9 @@ pub(super) const MISSING_EMBEDDED_UPDATER_PUBKEY_MESSAGE_SENTENCE: &str =
     "Native updater is not configured (missing embedded updater public key).";
 pub(super) const REMOTE_BOOTSTRAP_INSECURE_LOOPBACK_UPDATER_ENV: &str =
     "CTX_DESKTOP_ALLOW_INSECURE_LOCAL_UPDATER_FOR_REMOTE_BOOTSTRAP";
+pub(super) const ENABLE_NATIVE_UPDATER_ENV: &str = "CTX_DESKTOP_ENABLE_NATIVE_UPDATER";
+pub(super) const NATIVE_UPDATER_DISABLED_IN_DEV_MESSAGE: &str =
+    "Native updater is disabled in development builds. Set CTX_DESKTOP_ENABLE_NATIVE_UPDATER=1 to test updater flows.";
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct ParsedVersion {
@@ -214,6 +217,26 @@ pub(super) fn remote_bootstrap_insecure_loopback_override_enabled() -> bool {
     remote_bootstrap_insecure_loopback_override_enabled_for_build(
         cfg!(feature = "automation"),
         cfg!(debug_assertions),
+    )
+}
+
+pub(super) fn native_updater_enabled_for_build(
+    is_debug_build: bool,
+    explicit_enable: bool,
+) -> bool {
+    if !is_debug_build {
+        return true;
+    }
+    explicit_enable
+}
+
+pub(super) fn native_updater_enabled() -> bool {
+    native_updater_enabled_for_build(
+        cfg!(debug_assertions),
+        std::env::var(ENABLE_NATIVE_UPDATER_ENV)
+            .ok()
+            .as_deref()
+            == Some("1"),
     )
 }
 

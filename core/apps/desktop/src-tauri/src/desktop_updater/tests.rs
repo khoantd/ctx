@@ -260,6 +260,23 @@ impl Drop for EnvVarGuard {
 }
 
 #[test]
+fn native_updater_defaults_to_release_like_builds_only() {
+    let _guard = EnvVarGuard::unset(support::ENABLE_NATIVE_UPDATER_ENV);
+    assert!(support::native_updater_enabled_for_build(false, false));
+    assert!(!support::native_updater_enabled_for_build(true, false));
+    assert!(support::native_updater_enabled_for_build(true, true));
+}
+
+#[test]
+fn native_updater_honors_explicit_enable_env_in_debug_builds() {
+    let _guard = EnvVarGuard::set(support::ENABLE_NATIVE_UPDATER_ENV, "1");
+    assert_eq!(
+        support::native_updater_enabled(),
+        cfg!(debug_assertions)
+    );
+}
+
+#[test]
 fn remote_bootstrap_insecure_loopback_override_defaults_to_automation_builds() {
     let _guard = EnvVarGuard::unset(support::REMOTE_BOOTSTRAP_INSECURE_LOOPBACK_UPDATER_ENV);
     assert_eq!(

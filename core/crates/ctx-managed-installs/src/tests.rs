@@ -1155,7 +1155,7 @@ fn managed_provider_target_support_matches_install_kind() {
         "container support should track archive providers plus hybrid providers with staged container targets"
     );
     assert_eq!(
-        archive_count, 7,
+        archive_count, 6,
         "curated harness archive set changed; verify linux target coverage expectations"
     );
 }

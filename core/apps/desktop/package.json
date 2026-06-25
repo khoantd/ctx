@@ -5,8 +5,8 @@
   "license": "GPL-3.0-or-later",
   "scripts": {
     "ensure-dev-resources": "bash scripts/ensure-dev-resources.sh",
-    "dev": "pnpm run ensure-dev-resources && pnpm exec tauri dev",
-    "build": "pnpm run ensure-dev-resources && pnpm exec tauri build"
+    "dev": "CTX_DESKTOP_BIN_PROFILE=dev pnpm run ensure-dev-resources && pnpm exec tauri dev",
+    "build": "CTX_DESKTOP_BIN_PROFILE=release pnpm run ensure-dev-resources && pnpm exec tauri build"
   },
   "devDependencies": {
     "@crabnebula/tauri-driver": "2.0.8",

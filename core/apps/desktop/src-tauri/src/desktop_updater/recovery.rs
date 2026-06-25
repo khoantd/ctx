@@ -117,6 +117,17 @@ pub(super) async fn resolve_desktop_update_state(
         ));
     }
 
+    if !support::native_updater_enabled() {
+        return Ok(transaction::unconfigured_state(
+            &config,
+            current_version,
+            pending_restart_version,
+            Some(support::NATIVE_UPDATER_DISABLED_IN_DEV_MESSAGE.to_string()),
+            last_attempt_id,
+            last_error,
+        ));
+    }
+
     #[cfg(target_os = "windows")]
     {
         return Ok(transaction::unconfigured_state(
