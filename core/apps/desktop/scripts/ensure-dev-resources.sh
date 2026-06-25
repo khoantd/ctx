@@ -64,6 +64,68 @@ EOF
 EOF
 }
 
+profile_to_target_dir() {
+  case "$1" in
+    dev) echo "debug" ;;
+    release) echo "release" ;;
+    *) echo "$1" ;;
+  esac
+}
+
+ensure_host_bins() {
+  local profile="${CTX_DESKTOP_BIN_PROFILE:-dev}"
+  local target_dir_name
+  target_dir_name="$(profile_to_target_dir "${profile}")"
+  local core_root="${ROOT}/../.."
+  local target_dir="${core_root}/target/${target_dir_name}"
+  local bin_dir="${TAURI_DIR}/bin"
+  local target_triple bin_ext ctx_src mcp_src
+
+  target_triple="$(rustc --print host-tuple)"
+  bin_ext=""
+  if [[ "${target_triple}" == *"windows"* ]]; then
+    bin_ext=".exe"
+  fi
+
+  ctx_src="${target_dir}/ctx${bin_ext}"
+  mcp_src="${target_dir}/ctx-mcp${bin_ext}"
+
+  if [[ ! -f "${ctx_src}" || ! -f "${mcp_src}" ]]; then
+    echo "Building host binaries (ctx, ctx-mcp) for profile ${profile}..."
+    (
+      cd "${core_root}"
+      if [[ "${profile}" == "dev" ]]; then
+        cargo build --bin ctx --bin ctx-mcp
+      else
+        cargo build --profile "${profile}" --bin ctx --bin ctx-mcp
+      fi
+    )
+  fi
+
+  if [[ ! -f "${ctx_src}" ]]; then
+    echo "error: missing daemon binary at ${ctx_src} (expected ctx-http 'ctx' binary)" >&2
+    exit 1
+  fi
+  if [[ ! -f "${mcp_src}" ]]; then
+    echo "error: missing MCP binary at ${mcp_src}" >&2
+    exit 1
+  fi
+
+  mkdir -p "${bin_dir}"
+
+  stage_host_bin() {
+    local src="$1"
+    local name="$2"
+    cp "${src}" "${bin_dir}/${name}${bin_ext}"
+    cp "${src}" "${bin_dir}/${name}-${target_triple}${bin_ext}"
+    chmod +x "${bin_dir}/${name}${bin_ext}" "${bin_dir}/${name}-${target_triple}${bin_ext}" 2>/dev/null || true
+  }
+
+  stage_host_bin "${ctx_src}" "ctx-daemon"
+  stage_host_bin "${mcp_src}" "ctx-mcp"
+}
+
 ensure_web_dist
 ensure_provider_matrix
 ensure_artifact_identity
+ensure_host_bins

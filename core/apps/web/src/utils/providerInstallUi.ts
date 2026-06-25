@@ -83,10 +83,21 @@ export const computeInstallPct = (
   return previousPct;
 };
 
+const isArtifactNotFoundMessage = (message: string | undefined): boolean => {
+  if (!message) return false;
+  const normalized = message.toLowerCase();
+  return normalized.includes("404 not found")
+    || normalized.includes("http status client error (404")
+    || normalized.includes("status code: 404");
+};
+
 export const installErrorSummary = (errorCode: InstallErrorCode | undefined, fallback: string | undefined): string => {
   if (errorCode === "cancelled") return "Install cancelled.";
   if (errorCode === "unsupported_target") return "This provider is not available for the selected target.";
   if (errorCode === "invalid_target") return "Invalid install target. Re-scan providers and try again.";
+  if (errorCode === "download_failed" && isArtifactNotFoundMessage(fallback)) {
+    return "Release artifact not found on the ctx mirror (HTTP 404). Retry after updating ctx, or report missing provider binaries.";
+  }
   if (errorCode === "download_failed") return "Download failed. Check connectivity and retry.";
   if (errorCode === "checksum_mismatch") return "Integrity check failed. Retry; if it persists, refresh the provider matrix.";
   if (errorCode === "timeout") return "Install timed out. Retry or check host performance/network.";
